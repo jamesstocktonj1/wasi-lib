@@ -32,8 +32,26 @@ func (b *Bucket) Get(key string) (string, error) {
 	return string(value.Some().Slice()), nil
 }
 
+func (b *Bucket) GetBytes(key string) ([]byte, error) {
+	value, Err, isErr := b.bucket.Get(key).Result()
+	if isErr {
+		return nil, mapError(Err)
+	} else if value.None() {
+		return nil, nil
+	}
+	return value.Some().Slice(), nil
+}
+
 func (b *Bucket) Set(key, value string) error {
 	_, Err, isErr := b.bucket.Set(key, cm.ToList([]byte(value))).Result()
+	if isErr {
+		return mapError(Err)
+	}
+	return nil
+}
+
+func (b *Bucket) SetBytes(key string, value []byte) error {
+	_, Err, isErr := b.bucket.Set(key, cm.ToList(value)).Result()
 	if isErr {
 		return mapError(Err)
 	}
