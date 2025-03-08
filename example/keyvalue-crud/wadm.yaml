@@ -16,6 +16,11 @@ spec:
       type: component
       properties:
         image: "file://./build/keyvalue-crud_s.wasm"
+        config:
+          - name: crud-config
+            properties:
+              message: "Hello World!"
+              delete_enabled: "true"
       traits:
         - type: spreadscaler
           properties:

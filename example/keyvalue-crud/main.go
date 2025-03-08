@@ -3,8 +3,10 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
+	"github.com/jamesstocktonj1/wasi-lib/pkg/config"
 	"github.com/jamesstocktonj1/wasi-lib/pkg/keyvalue"
 	"github.com/julienschmidt/httprouter"
 	"go.wasmcloud.dev/component/log/wasilog"
@@ -26,7 +28,17 @@ func create(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	enc.SetIndent("", "  ")
 
 	doc := ps.ByName("document")
-	logger.Info("handle create", "document", doc)
+	documentId := fmt.Sprintf("%s.%s", config.GetStringDefault("keyspace", "default"), doc)
+	logger.Info("handle create", "document", documentId)
+
+	value := map[string]any{}
+	err := json.NewDecoder(r.Body).Decode(&value)
+	if err != nil {
+		enc.Encode(map[string]string{
+			"error": err.Error(),
+		})
+		return
+	}
 
 	bucket, err := keyvalue.Open("store")
 	if err != nil {
@@ -37,7 +49,7 @@ func create(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		return
 	}
 
-	err = bucket.Set(doc, "Hello World!")
+	err = bucket.SetDocument(documentId, value)
 	if err != nil {
 		logger.Error("bucket.Set", "error", err)
 		enc.Encode(map[string]string{
@@ -56,7 +68,8 @@ func read(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	enc.SetIndent("", "  ")
 
 	doc := ps.ByName("document")
-	logger.Info("handle read", "document", doc)
+	documentId := fmt.Sprintf("%s.%s", config.GetStringDefault("keyspace", "default"), doc)
+	logger.Info("handle read", "document", documentId)
 
 	bucket, err := keyvalue.Open("store")
 	if err != nil {
@@ -67,18 +80,17 @@ func read(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		return
 	}
 
-	value, err := bucket.Get(doc)
+	value := map[string]any{}
+	err = bucket.GetDocument(documentId, &value)
 	if err != nil {
-		logger.Error("bucket.Get", "error", err)
+		logger.Error("bucket.GetDocument", "error", err)
 		enc.Encode(map[string]string{
 			"error": err.Error(),
 		})
 		return
 	}
 
-	enc.Encode(map[string]string{
-		"message": value,
-	})
+	enc.Encode(value)
 }
 
 func del(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
@@ -86,7 +98,15 @@ func del(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	enc.SetIndent("", "  ")
 
 	doc := ps.ByName("document")
-	logger.Info("handle delete", "document", doc)
+	documentId := fmt.Sprintf("%s.%s", config.GetStringDefault("keyspace", "default"), doc)
+	logger.Info("handle delete", "document", documentId)
+
+	if !config.GetBoolDefault("delete_enabled", false) {
+		enc.Encode(map[string]string{
+			"message": "delete not enabled",
+		})
+		return
+	}
 
 	bucket, err := keyvalue.Open("store")
 	if err != nil {
@@ -97,7 +117,7 @@ func del(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		return
 	}
 
-	err = bucket.Delete(doc)
+	err = bucket.Delete(documentId)
 	if err != nil {
 		logger.Error("bucket.Delete", "error", err)
 		enc.Encode(map[string]string{
