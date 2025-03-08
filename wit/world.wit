@@ -4,4 +4,7 @@ world wasi-lib {
     // keyvalue
     import wasi:keyvalue/store@0.2.0-draft;
     import wasi:keyvalue/atomics@0.2.0-draft;
+
+    // config
+    import wasi:config/runtime@0.2.0-draft;
 }
