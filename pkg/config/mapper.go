@@ -8,8 +8,15 @@ import (
 
 var (
 	ErrNotFound = errors.New("not found")
+	ErrUpstream = errors.New("upstream error")
+	ErrIO       = errors.New("io error")
 )
 
 func mapError(err runtime.ConfigError) error {
-	return nil
+	switch err.String() {
+	case "upstream":
+		return ErrUpstream
+	default:
+		return ErrIO
+	}
 }
